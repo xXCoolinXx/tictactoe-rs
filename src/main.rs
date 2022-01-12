@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use rand::seq::SliceRandom;
 use std::io;
-use std::ascii::AsciiExt;
+//use std::ascii::AsciiExt;
 
 #[derive(PartialEq)]
 enum State
@@ -14,8 +14,6 @@ enum State
 
 fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
 {
-    let mut x : usize = 0;
-    let mut y : usize = 0;
     loop
     {
         let mut pos = String::new();
@@ -24,13 +22,13 @@ fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
             .read_line(&mut pos)
             .expect("Failed to read line");
     
-        let mut pos = pos.trim().split_once(",").unwrap();
+        let pos = pos.trim().split_once(",").unwrap();
 
-        x = match pos.0.parse() {
+        let x : usize = match pos.0.parse() {
             Ok(num) => num,
             Err(_) => continue,
         };
-        y = match pos.1.parse() {
+        let y : usize = match pos.1.parse() {
             Ok(num) => num,
             Err(_) => continue,
         };
@@ -208,6 +206,7 @@ fn comp_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
     board[spot.0][spot.1] = marker; 
 }
 
+#[allow(dead_code)]
 fn rand_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
 {
     let empties = get_blanks(board);
@@ -271,7 +270,7 @@ fn run_game(board : &mut[[& str; 3]; 3])
                 .read_line(&mut response)
                 .expect("Failed to read line");
         
-            let mut response = response.trim();
+            let response = response.trim();
 
             if response.eq_ignore_ascii_case("y") || response == ""
             {
