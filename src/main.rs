@@ -1,6 +1,7 @@
 use std::vec::Vec;
 use rand::seq::SliceRandom;
 use std::io;
+use colored::Colorize;
 //use std::ascii::AsciiExt;
 
 #[derive(PartialEq)]
@@ -17,24 +18,29 @@ fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
     loop
     {
         let mut pos = String::new();
-        println!("Where to do you want to place a marker? (row, col)");
+        println!("Which number to place at? ");
         io::stdin()
             .read_line(&mut pos)
             .expect("Failed to read line");
     
-        let pos = pos.trim().split_once(",").unwrap();
-
-        let x : usize = match pos.0.parse() {
+        let num : usize = match pos.trim().parse() {
             Ok(num) => num,
-            Err(_) => continue,
+            Err(_) => {
+                println!("Failed to read number. Please enter again.");
+                continue
+            },
         };
-        let y : usize = match pos.1.parse() {
-            Ok(num) => num,
-            Err(_) => continue,
-        };
+        if !(num >= 1 && num <= 9)
+        {
+            println!("That is not a choice! Please enter again.");
+            continue
+        }
 
-        if board[x-1][y-1] == " " {
-            board[x-1][y-1] = marker;
+        let x = ((num-1) - (num-1) % 3) / 3;
+        let y = (num+2) % 3; 
+
+        if board[x][y] != "X" &&  board[x][y] != "O" {
+            board[x][y] = marker;
             break
         } else {
             println!("That spot is already taken! Please enter again.");
@@ -138,7 +144,7 @@ fn get_blanks(board : &[[&str; 3]; 3]) -> Vec<(usize, usize)>
     {
         for j in 0..3
         {
-            if board[i][j] == " "
+            if board[i][j] != "O" && board[i][j] != "X"
             {
                 empties.push((i, j));
             }
@@ -156,7 +162,7 @@ fn calc_optimal<'a>(board : &[[&'a str; 3]; 3], marker : &'a str) -> ((usize, us
     {
         for j in 0..3
         {
-            if board[i][j] == " "
+            if board[i][j] != "O" && board[i][j] != "X"
             {
                 let mut mboard = *board;
                 mboard[i][j] = marker;
@@ -288,29 +294,63 @@ fn run_game(board : &mut[[& str; 3]; 3])
 
 fn clear_board(board : &mut[[& str; 3]; 3])
 {
-    *board = [[" "; 3]; 3]
+    //let mut enumerate = 0;
+    //for i in 0..3
+    //{
+    //    for j in 0..3
+    //    {
+    //        enumerate += 1;
+    //        let tmp = format!("{}", enumerate);
+    //        board[i][j] = &tmp;//.as_str();
+    //    }
+    //}
+
+    *board = [["1", "2", "3"], 
+             ["4", "5", "6"], 
+             ["7", "8", "9"]];
+}
+
+fn new_board<'a>() -> [[&'a str; 3]; 3]
+{
+    let mut board = [[" "; 3]; 3];
+    clear_board(&mut board);
+    return board;
 }
 
 fn print_board(board : &[[&str; 3]; 3])
 {
     print!("\x1B[1J\x1B[1;1H");
-    println!("   1   2   3  ");
+    //println!("   1   2   3  ");
     let mut enumerate = 0;
     for row in board { 
-        enumerate += 1;
-        let mut row_str = String::from(format!("{} ", enumerate));
+        //enumerate += 1;
+        let mut row_str = "".color("white"); //from(format!("{} ", enumerate));
         for spot in row
         {
-            row_str.push_str(&format!(" {} |", spot)[..]);
+            enumerate += 1;
+            if *spot == "X"
+            {
+                row_str = format!("{} {} ", row_str, format!("{}", spot).bold()).color("red");
+            }
+            else if *spot == "O"
+            {
+                row_str = format!("{} {} ", row_str, format!("{}", spot).bold()).color("blue");
+            }
+            else
+            {
+                row_str = format!("{} {} ", row_str, format!("{}", spot)).color("white");
+            }
+            if enumerate % 3 != 0 {row_str = format!("{}{}", row_str, format!("|").bold()).color("white");}
         }
-        row_str.pop();
-        println!("{}", row_str);
-        if enumerate != 3 {println!("{}", "  ---+---+---");}
+
+        println!("{}", row_str); 
+        if enumerate != 9 {println!("{}", format!("---+---+---").bold().white());}
     }
 }
 
 fn main() {
-    let mut board:[[&str; 3]; 3] = [[" "; 3]; 3];
+    //let mut board:[[&str; 3]; 3] = [[" "; 3]; 3];
+    let mut board = new_board();
 
     //board = [["O", "X", "O"],
     //            ["X", "O", "X"],
