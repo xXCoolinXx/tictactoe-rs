@@ -13,6 +13,13 @@ enum State
     Draw,
 }
 
+#[derive(PartialEq)]
+enum Marker
+{
+    X,
+    O,
+}
+
 fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
 {
     loop
@@ -320,70 +327,36 @@ fn new_board<'a>() -> [[&'a str; 3]; 3]
 fn print_board(board : &[[&str; 3]; 3])
 {
     print!("\x1B[1J\x1B[1;1H");
-    //println!("   1   2   3  ");
     let mut enumerate = 0;
     for row in board { 
-        //enumerate += 1;
-        let mut row_str = "".color("white"); //from(format!("{} ", enumerate));
         for spot in row
         {
             enumerate += 1;
             if *spot == "X"
             {
-                row_str = format!("{} {} ", row_str, format!("{}", spot).bold()).color("red");
+                print!(" {} ", spot.bold().red());
             }
             else if *spot == "O"
             {
-                row_str = format!("{} {} ", row_str, format!("{}", spot).bold()).color("blue");
+                print!(" {} ", spot.bold().blue());
             }
             else
             {
-                row_str = format!("{} {} ", row_str, format!("{}", spot)).color("white");
+                print!(" {} ", spot.bold().white());
             }
-            if enumerate % 3 != 0 {row_str = format!("{}{}", row_str, format!("|").bold()).color("white");}
+            if enumerate % 3 != 0
+            {
+                print!("{}", "|".bold().white());
+            }
         }
 
-        println!("{}", row_str); 
+        println!("");
         if enumerate != 9 {println!("{}", format!("---+---+---").bold().white());}
     }
 }
 
 fn main() {
-    //let mut board:[[&str; 3]; 3] = [[" "; 3]; 3];
     let mut board = new_board();
 
-    //board = [["O", "X", "O"],
-    //            ["X", "O", "X"],
-    //            [" ", "X", "O"]];
-
-    //rand_add(&mut board, "O");
-    //comp_add(&mut board, "X");
-
-    //let mut owins = 0; 
-    //let mut xwins = 0;
-    //let mut draws = 0;
-//
-    //while owins + xwins + draws < 2500
-    //{
-    //    match run_game(&mut board)
-    //    {
-    //        State::WinO => owins += 1,
-    //        State::WinX => xwins += 1,
-    //        State::Draw => draws += 1,
-    //        _ => println!("Bruh")
-    //    }
-    //}
-
     run_game(&mut board);
-
-    //println!("owins: {}", owins);
-    //println!("xwins: {}", xwins);
-    //println!("draws: {}", draws);
-
-    //print_board(&board);
-    //println!("{}", check_win(&board, "O") || check_win(&board, "X"));
-    //if get_state(&board) == State::Draw
-    //{
-    //    println!("Bruh");
-    //}
 }
