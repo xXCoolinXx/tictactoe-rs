@@ -14,15 +14,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cargo"
-version = "0.1.0"
-dependencies = [
- "colored",
- "rand",
- "terminal_graphics",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -41,9 +32,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
+checksum = "418d37c8b1d42553c93648be529cb70f920d3baf8ef469b74b9638df426e0b4c"
 dependencies = [
  "cfg-if",
  "libc",
@@ -122,6 +113,15 @@ name = "terminal_graphics"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3585912e123cb72d56d923dde7419b329481d4ed76cb01d8c0d733281484edb"
+
+[[package]]
+name = "tictactoe"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "rand",
+ "terminal_graphics",
+]
 
 [[package]]
 name = "wasi"
