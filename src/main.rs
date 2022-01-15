@@ -13,13 +13,6 @@ enum State
     Draw,
 }
 
-#[derive(PartialEq)]
-enum Marker
-{
-    X,
-    O,
-}
-
 fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
 {
     loop
@@ -342,16 +335,16 @@ fn print_board(board : &[[&str; 3]; 3])
             }
             else
             {
-                print!(" {} ", spot.bold().white());
+                print!(" {} ", spot.bold());
             }
             if enumerate % 3 != 0
             {
-                print!("{}", "|".bold().white());
+                print!("{}", "|".bold());
             }
         }
 
         println!("");
-        if enumerate != 9 {println!("{}", format!("---+---+---").bold().white());}
+        if enumerate != 9 {println!("{}", format!("---+---+---").bold());}
     }
 }
 
