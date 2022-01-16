@@ -313,7 +313,7 @@ fn clear_board(board : &mut[[& str; 3]; 3])
              ["1", "2", "3"]];
 }
 
-fn new_board<'a>() -> [[&'a str; 3]; 3]
+fn new_board<'a>() -> [[&'a str; 3]; 3] 
 {
     let mut board = [[" "; 3]; 3];
     clear_board(&mut board);
