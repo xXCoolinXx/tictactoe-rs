@@ -115,15 +115,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3585912e123cb72d56d923dde7419b329481d4ed76cb01d8c0d733281484edb"
 
 [[package]]
-name = "tictactoe"
-version = "0.1.0"
-dependencies = [
- "colored",
- "rand",
- "terminal_graphics",
-]
-
-[[package]]
 name = "wasi"
 version = "0.10.2+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -150,3 +141,12 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "xo-rs"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "rand",
+ "terminal_graphics",
+]

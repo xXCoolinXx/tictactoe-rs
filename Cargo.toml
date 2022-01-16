@@ -1,5 +1,5 @@
 [package]
-name = "tictactoe-rs"
+name = "xo-rs"
 version = "0.1.0"
 edition = "2021"
 authors = ["xXCoolinXx collin.t.francel@gmail.com"]
@@ -7,8 +7,8 @@ description = "TicTacToe terminal game with Rust"
 homepage = "https://github.com/xXCoolinXx/tictactoe-rs"
 repository = "https://github.com/xXCoolinXx/tictactoe-rs"
 license = "GPL-3.0-or-later"
-keywords = ["tictactoe", "rust", "ttt"]
-categories = ["games", "terminal-games"]
+keywords = ["tictactoe", "rust", "ttt", "xo"]
+categories = ["games"]
 readme="README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
