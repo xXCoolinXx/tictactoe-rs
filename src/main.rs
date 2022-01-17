@@ -1,8 +1,26 @@
+//  xo-rs: A terminal tic tac toe game
+//  Copyright (C) 2022  Collin Francel
+//  
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//  
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// If you have any questions, contact me at collin.t.francel@gmail.com      
+
 use std::vec::Vec;
 use rand::seq::SliceRandom;
 //use rand::Rng;
 use std::io::{self, Write};
-use colored::Colorize;
+use colored::*;
 
 #[derive(PartialEq)]
 enum State
@@ -360,7 +378,10 @@ fn choose_player<'a>(marker : &str) -> &dyn Fn(&mut[[&'a str; 3]; 3], &'a str)
                 .read_line(&mut mstr)
                 .expect("Failed to read line");
 
-        match mstr.as_str().trim() {
+        match mstr.as_str().trim().chars().nth(0).unwrap().to_string().as_str() {
+            //This is awful lmao
+            //String to &str, remove spaces, convert to char list, 
+            //get first element, unwrap to u8, convert to String, convert to &str
             "U" | "u" => return &user_add,
             "C" | "c" => return &comp_add,
             "R" | "r" => return &rand_add,
@@ -373,6 +394,11 @@ fn choose_player<'a>(marker : &str) -> &dyn Fn(&mut[[&'a str; 3]; 3], &'a str)
 }
 
 fn main() {
+    #[cfg(windows)]
+    {
+        control::set_virtual_terminal(true).unwrap();
+    }
+
     let mut board = new_board();
 
     run_game(&mut board, choose_player("X"), choose_player("O"));
