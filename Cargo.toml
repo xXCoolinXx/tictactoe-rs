@@ -1,13 +1,13 @@
 [package]
 name = "xo-rs"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["xXCoolinXx collin.t.francel@gmail.com"]
 description = "TicTacToe terminal game with Rust"
-homepage = "https://github.com/xXCoolinXx/tictactoe-rs"
-repository = "https://github.com/xXCoolinXx/tictactoe-rs"
+homepage = "https://github.com/xXCoolinXx/xo-rs"
+repository = "https://github.com/xXCoolinXx/xo-rs"
 license = "GPL-3.0-or-later"
-keywords = ["tictactoe", "rust", "ttt", "xo"]
+keywords = ["tictactoe", "cli", "ttt", "xo", "tic-tac-toe"]
 categories = ["games"]
 readme="README.md"
 
@@ -15,5 +15,4 @@ readme="README.md"
 
 [dependencies]
 rand = "0.8.0"
-terminal_graphics = "0.1.5"
 colored = "2"
