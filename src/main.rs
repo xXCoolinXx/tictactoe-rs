@@ -31,12 +31,75 @@ enum State
     Draw,
 }
 
-fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
+#[derive(Copy, Clone)]
+#[derive(PartialEq)]
+enum Marker
+{
+    X,
+    O,
+    Empty(usize),
+}
+
+impl Marker
+{
+    fn string(&self) -> String
+    {
+        match self 
+        {
+            Marker::X => return String::from("X"),
+            Marker::O => return String::from("O"),
+            Marker::Empty(size) => return  size.to_string(),
+        }
+    }
+    fn to_color(&self) -> ColoredString
+    {
+        match self
+        {
+            Marker::X => return self.string().bold().red(),
+            Marker::O => return self.string().bold().blue(),
+            Marker::Empty(_) => return self.string().bold(),
+        }
+    }
+    fn opposite(&self) -> Marker
+    {
+        match self
+        {
+            Marker::X => return Marker::O,
+            Marker::O => return Marker::X,
+            Marker::Empty(size) => return Marker::Empty(*size)
+        }
+    }
+    fn win_con(&self) -> State
+    {
+        match self
+        {
+            Marker::X => State::WinX,
+            Marker::O => State::WinO,
+            Marker::Empty(_) => State::Incomplete
+        }
+    }
+    fn random() -> Marker
+    {
+        let markers : [Marker; 2] = [Marker::O, Marker::X];
+        return *markers.choose(&mut rand::thread_rng()).unwrap();
+    }
+    fn is_empty(&self) -> bool
+    {
+        match self
+        {
+            Marker::X | Marker::O => return false,
+            Marker::Empty(_) => return true
+        }
+    }
+}
+
+
+fn user_add(board : &mut[[Marker; 3]; 3], marker : Marker)
 {
     loop
     {
         let mut pos = String::new();
-        print!("{}: ", to_color(marker));
+        print!("{}: ", marker.to_color());
         let _ = io::stdout().flush();
         io::stdin()
             .read_line(&mut pos)
@@ -58,7 +121,7 @@ fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
         let x = 2 - ((num-1) - (num-1) % 3) / 3;
         let y = (num+2) % 3; 
 
-        if board[x][y] != "X" &&  board[x][y] != "O" {
+        if board[x][y].is_empty() {
             board[x][y] = marker;
             break
         } else {
@@ -68,7 +131,7 @@ fn user_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
     }
 }
 
-fn check_win(board : &[[&str; 3]; 3], marker : &str) -> bool 
+fn check_win(board : &[[Marker; 3]; 3], marker : Marker) -> bool 
 {
     let mut winul : bool = board[0][0] == marker;
     let mut winur : bool = board[2][0] == marker;
@@ -103,13 +166,13 @@ fn check_win(board : &[[&str; 3]; 3], marker : &str) -> bool
     winul || winur
 }
 
-fn get_state(board : &[[&str; 3]; 3]) -> State
+fn get_state(board : &[[Marker; 3]; 3]) -> State
 {
-    if check_win(board, "O") 
+    if check_win(board, Marker::O) 
     {
         return State::WinO;
     }
-    else if check_win(board, "X")
+    else if check_win(board, Marker::X)
     {
         return State::WinX;
     }
@@ -124,46 +187,14 @@ fn get_state(board : &[[&str; 3]; 3]) -> State
     }
 }
 
-fn opp(marker : &str) -> &str
-{
-    if marker == "X"
-    {
-        "O"
-    }
-    else if marker == "O"
-    {
-        "X"
-    }
-    else
-    {
-        " "
-    }
-}
-
-fn win_con(marker : &str) -> State
-{
-    if marker == "X"
-    {
-        return State::WinX;
-    }
-    else if marker == "O"
-    {
-        return State::WinO;
-    }
-    else
-    {
-        return State::Incomplete;
-    }
-}
-
-fn get_blanks(board : &[[&str; 3]; 3]) -> Vec<(usize, usize)>
+fn get_blanks(board : &[[Marker; 3]; 3]) -> Vec<(usize, usize)>
 {
     let mut empties = Vec::new();
     for i in 0..3
     {
         for j in 0..3
         {
-            if board[i][j] != "O" && board[i][j] != "X"
+            if board[i][j].is_empty()
             {
                 empties.push((i, j));
             }
@@ -174,30 +205,31 @@ fn get_blanks(board : &[[&str; 3]; 3]) -> Vec<(usize, usize)>
     empties
 }
 
-fn calc_optimal<'a>(board : &[[&'a str; 3]; 3], marker : &'a str) -> ((usize, usize), i32)
+fn calc_optimal(board : &[[Marker; 3]; 3], marker : Marker) -> ((usize, usize), i32)
 {  
     let mut move_list = Vec::new();
     for i in 0..3
     {
         for j in 0..3
         {
-            if board[i][j] != "O" && board[i][j] != "X"
+            if board[i][j].is_empty()
             {
                 let mut mboard = *board;
                 mboard[i][j] = marker;
                 let state = get_state(&mboard);
                 
-                if state == win_con(marker) //Note: shouldn't have to handle win_con(opp(marker))
+                if state == marker.win_con()
                 {
-                    return ((i, j), 1); //Score of 1 for winning game
+                    return ((i, j), 1);
                 }
                 else if state == State::Draw
                 {
-                    return ((i, j), 0); //Board filled up, no more left to do
+                    return ((i, j), 0);
                 }
                 else
                 {
-                    let score = -1 * calc_optimal(&mboard, opp(marker)).1; //Reverse scores for O because no want win
+                    let score = -1 * calc_optimal(&mboard, marker.opposite()).1; 
+                    //Reverse scores for O because no want win
                     move_list.push(((i, j), score));
                 }
             }
@@ -219,7 +251,6 @@ fn calc_optimal<'a>(board : &[[&'a str; 3]; 3], marker : &'a str) -> ((usize, us
             break;
         }
     }
-
     //if rand::thread_rng().gen_bool(7.0 / 100.0) && bottom_index != 0
     //{
     //    bottom_index -= 1;
@@ -231,14 +262,14 @@ fn calc_optimal<'a>(board : &[[&'a str; 3]; 3], marker : &'a str) -> ((usize, us
     *top_list.choose(&mut rand::thread_rng()).unwrap() //Return one with the top score
 }
 
-fn comp_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
+fn comp_add(board : &mut[[Marker; 3]; 3], marker : Marker)
 {
-    println!("{}: Computing...", to_color(marker));
+    println!("{}: Computing...", marker.to_color());
     let spot : (usize,  usize) = calc_optimal(board, marker).0;
     board[spot.0][spot.1] = marker; 
 }
 
-fn rand_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
+fn rand_add(board : &mut[[Marker; 3]; 3], marker : Marker)
 {
     let empties = get_blanks(board);
     let pos = empties.choose(&mut rand::thread_rng()).unwrap();
@@ -246,27 +277,26 @@ fn rand_add<'a>(board : &mut[[&'a str; 3]; 3], marker : &'a str)
     board[pos.0][pos.1] = marker;
 }
 
-fn turns<'a>(board : &mut[[&'a str; 3]; 3], 
-    add_x : &dyn Fn(&mut[[&'a str; 3]; 3], &'a str),
-    add_o : &dyn Fn(&mut[[&'a str; 3]; 3], &'a str)) -> State
+fn turns(board : &mut[[Marker; 3]; 3], 
+    add_x : &dyn Fn(&mut[[Marker; 3]; 3], Marker),
+    add_o : &dyn Fn(&mut[[Marker; 3]; 3], Marker)) -> State
 {
-    let markers : [&'a str; 2] = ["O","X"];
-    let first = markers.choose(&mut rand::thread_rng()).unwrap(); //Choose randomly between markers
+    let first = Marker::random();
     print_board(board);
     loop
     {
-        if *first == "X"
+        if first == Marker::X
         {
-            if get_state(board) == State::Incomplete { add_x(board, "X"); }
+            if get_state(board) == State::Incomplete { add_x(board, Marker::X); }
             print_board(board);
-            if get_state(board) == State::Incomplete { add_o(board, "O"); }
+            if get_state(board) == State::Incomplete { add_o(board, Marker::O); }
             print_board(board);
         }
-        if *first == "O"
+        if first == Marker::O
         {
-            if get_state(board) == State::Incomplete { add_o(board, "O"); }
+            if get_state(board) == State::Incomplete { add_o(board, Marker::O); }
             print_board(board);
-            if get_state(board) == State::Incomplete { add_x(board, "X"); }
+            if get_state(board) == State::Incomplete { add_x(board, Marker::X); }
             print_board(board);
         }
         let state = get_state(board);
@@ -279,9 +309,9 @@ fn turns<'a>(board : &mut[[&'a str; 3]; 3],
     }
 }
 
-fn run_game<'a>(board : &mut[[&'a str; 3]; 3], 
-                add_x : &dyn Fn(&mut[[&'a str; 3]; 3], &'a str),
-                add_o : &dyn Fn(&mut[[&'a str; 3]; 3], &'a str))
+fn run_game(board : &mut[[Marker; 3]; 3], 
+                add_x : &dyn Fn(&mut[[Marker; 3]; 3], Marker),
+                add_o : &dyn Fn(&mut[[Marker; 3]; 3], Marker))
 { //Complicated function reference moment
     let mut xwins = 0;
     let mut owins = 0;
@@ -296,11 +326,11 @@ fn run_game<'a>(board : &mut[[&'a str; 3]; 3],
             _ => println!("Bruh")
         }
         println!("{}: {}, {}: {}, {}: {}", 
-            to_color("X"), 
+            Marker::X.to_color(), 
                         xwins, 
-            to_color("O"), 
+            Marker::O.to_color(), 
                         owins, 
-            to_color("Draws"), 
+            "Draws".bold(), 
                         draws);
         
         loop
@@ -324,30 +354,27 @@ fn run_game<'a>(board : &mut[[&'a str; 3]; 3],
     }
 }
 
-fn clear_board(board : &mut[[& str; 3]; 3])
+fn clear_board(board : &mut[[Marker; 3]; 3])
 {
-    *board = [["7", "8", "9"], 
-             ["4", "5", "6"], 
-             ["1", "2", "3"]];
+    let mut enumerate = 0;
+    for i in (0..3).rev()
+    {
+        for j in 0..3
+        {
+            enumerate += 1; 
+            board[i][j] = Marker::Empty(enumerate);
+        }
+    }
 }
 
-fn new_board<'a>() -> [[&'a str; 3]; 3] 
+fn new_board() -> [[Marker; 3]; 3] 
 {
-    let mut board = [[" "; 3]; 3];
+    let mut board = [[Marker::Empty(0); 3]; 3];
     clear_board(&mut board);
     return board;
 }
 
-fn to_color(text : &str) -> colored::ColoredString
-{
-    match text {
-        "X" => return text.red().bold(),
-        "O" => return text.blue().bold(),
-        _ => return text.bold()
-    }
-}
-
-fn print_board(board : &[[&str; 3]; 3])
+fn print_board(board : &[[Marker; 3]; 3])
 {
     print!("\x1B[1J\x1B[1;1H");
     let mut enumerate = 0;
@@ -355,7 +382,7 @@ fn print_board(board : &[[&str; 3]; 3])
         for spot in row
         {
             enumerate += 1;
-            print!(" {} ", to_color(spot));
+            print!(" {} ", spot.to_color());
 
             if enumerate % 3 != 0
             {
@@ -368,11 +395,11 @@ fn print_board(board : &[[&str; 3]; 3])
     }
 }
 
-fn choose_player<'a>(marker : &str) -> &dyn Fn(&mut[[&'a str; 3]; 3], &'a str)
+fn choose_player(marker : Marker) -> &'static dyn Fn(&mut[[Marker; 3]; 3], Marker)
 {
     loop {
         let mut mstr = String::new();
-        print!("Player {} [{}ser/{}PU/{}andom]: ", to_color(marker), "U".underline(), "C".underline(), "R".underline());
+        print!("Player {} [{}ser/{}PU/{}andom]: ", marker.to_color(), "U".underline(), "C".underline(), "R".underline());
         let _ = io::stdout().flush();
         io::stdin()
                 .read_line(&mut mstr)
@@ -401,5 +428,5 @@ fn main() {
 
     let mut board = new_board();
 
-    run_game(&mut board, choose_player("X"), choose_player("O"));
+    run_game(&mut board, choose_player(Marker::X), choose_player(Marker::O));
 }
