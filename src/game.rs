@@ -3,6 +3,7 @@ use rand::seq::SliceRandom;
 //use rand::Rng;
 use std::io::{self, Write};
 use colored::*;
+use ndarray::prelude::*;
 
 #[derive(PartialEq)]
 pub enum State
@@ -77,71 +78,27 @@ impl Marker
 
 pub struct Board
 {
-    array : [[Marker; 3]; 3]
+    array : Array2<Marker>
 }
 
 impl Board {
-    fn user_add(&mut self, marker : Marker)
-    {
-        loop
-        {
-            let mut pos = String::new();
-            print!("{}: ", marker.as_color());
-            let _ = io::stdout().flush();
-            io::stdin()
-                .read_line(&mut pos)
-                .expect("Failed to read line");
-        
-            let num : usize = match pos.trim().parse() {
-                Ok(num) => num,
-                Err(_) => {
-                    println!("Failed to read number. Please enter again.");
-                    continue
-                },
-            };
-            if !((1..=9).contains(&num))
-            {
-                println!("That is not a choice! Please enter again.");
-                continue
-            }
-
-            let x = 2 - ((num-1) - (num-1) % 3) / 3;
-            let y = (num+2) % 3; 
-
-            if self.array[x][y].is_empty() {
-                self.array[x][y] = marker;
-                break
-            } else {
-                println!("That spot is already taken! Please enter again.");
-                continue
-            }
-        }
-    }
-
-    fn comp_add(&mut self, marker : Marker)
-    {
-        println!("{}: Computing...", marker.as_color());
-        let spot : (usize,  usize) = self.calc_optimal(marker).0;
-        self.array[spot.0][spot.1] = marker;
-    }
-
     fn avg_add(&mut self, marker : Marker)
     {
         for pos in self.get_blanks()
         {
             let mut oppboard = Board {
-                array : self.array
+                array : self.array.clone()
             };
             let mut dubboard = Board{
-                array : self.array
+                array : self.array.clone()
             };
             
-            oppboard.array[pos.0][pos.1] = marker.opposite();
-            dubboard.array[pos.0][pos.1] = marker;
+            oppboard.array[pos] = marker.opposite();
+            dubboard.array[pos] = marker;
 
             if dubboard.check_win(marker) || oppboard.check_win(marker.opposite())
             {
-                self.array[pos.0][pos.1] = marker;
+                self.array[pos] = marker;
                 return;
             } //If marker wins or opponent wins, place it there 
         }
@@ -149,112 +106,35 @@ impl Board {
         self.rand_add(marker);
     }
 
-    fn rand_add(&mut self, marker : Marker)
-    {
-        let empties = self.get_blanks();
-        let pos = empties.choose(&mut rand::thread_rng()).unwrap();
-
-        self.array[pos.0][pos.1] = marker;
-    }
-
-    fn check_win(&self, marker : Marker) -> bool 
-    {
-        let mut winul : bool = self.array[0][0] == marker;
-        let mut winur : bool = self.array[2][0] == marker;
-        for i in 0..3
-        {
-            let mut winrow : bool = self.array[i][0] == marker;
-            let mut wincol : bool = self.array[0][i] == marker;
-
-            for j in 0..3
-            {
-                winrow = winrow && self.array[i][j] == marker;
-                wincol = wincol && self.array[j][i] == marker;
-                if i == j
-                {
-                    winul = winul && self.array[i][j] == marker;
-                } 
-                if (2 - i) == j {
-                    winur = winur && self.array[i][j] == marker;
-                }
-            }
-            if winrow || wincol 
-            {
-                return winrow || wincol;
-                //println!("wincol: {}", wincol);
-                //println!("winrow: {}", winrow);
-            }
-        }
-
-        //println!("winur: {}", winur);
-        //println!("winul: {}", winul);
-
-        winul || winur
-    }
-
-    fn get_state(&self) -> State
-    {
-        if self.check_win(Marker::O) {
-            State::WinO
-        }
-        else if self.check_win(Marker::X) {
-            State::WinX
-        } else if self.get_blanks().is_empty() {
-            State::Draw
-        } else {
-            State::Incomplete
-        }
-    }
-
-    fn get_blanks(&self) -> Vec<(usize, usize)>
-    {
-        let mut empties = Vec::new();
-        for i in 0..3
-        {
-            for j in 0..3
-            {
-                if self.array[i][j].is_empty()
-                {
-                    empties.push((i, j));
-                }
-            }
-        }
-
-        //println!("{:?}", empties);
-        empties
-    }
-
-    fn calc_optimal(&self, marker : Marker) -> ((usize, usize), i32)
+    fn calc_optimal(&self, marker : Marker) -> ([usize; 2], i32)
     {  
         let mut move_list = Vec::new();
-        for i in 0..3
+        for (num, _) in self.array.iter().enumerate()
         {
-            for j in 0..3
-            {
-                if self.array[i][j].is_empty()
+            let index = self.enumerate_to_index(num);
+                if self.array[index].is_empty()
                 {
                     let mut mboard = Board{
-                        array : self.array
+                        array : self.array.clone()
                     };
-                    mboard.array[i][j] = marker;
+                    mboard.array[index] = marker;
                     let state = mboard.get_state();
 
                     if state == marker.win_con()
                     {
-                        return ((i, j), 1);
+                        return (index, 1);
                     }
                     else if state == State::Draw
                     {
-                        return ((i, j), 0);
+                        return (index, 0);
                     }
                     else
                     {
                         let score = - mboard.calc_optimal(marker.opposite()).1; 
                         //Reverse scores for O because no want win
-                        move_list.push(((i, j), score));
+                        move_list.push((index, score));
                     }
                 }
-            }
         }
 
         move_list.sort_by(|a, b| a.1.cmp(&b.1)); //Order it I think
@@ -272,134 +152,44 @@ impl Board {
                 break;
             }
         }
-        //if rand::thread_rng().gen_bool(7.0 / 100.0) && bottom_index != 0
-        //{
-        //    bottom_index -= 1;
-        //    println!("he messd up :joy:");
-        //} //10% * 1 / (top_list.len() + 1) = chance of suboptimal play
-
-        let top_list : Vec<((usize,usize), i32)> = move_list[bottom_index..].to_vec();
+        let top_list : Vec<([usize; 2], i32)> = move_list[bottom_index..].to_vec();
         
         *top_list.choose(&mut rand::thread_rng()).unwrap() //Return one with the top score
     }
 
-    fn turns(&mut self, 
-        add_x : &dyn Fn(&mut Board, Marker),
-        add_o : &dyn Fn(&mut Board, Marker)) -> State
+    fn check_win(&self, marker : Marker) -> bool 
     {
-        let first = Marker::random();
-        self.print();
-        loop
+        let mut winul : bool = self.array[[0, 0]] == marker;
+        let mut winur : bool = self.array[[self.array.nrows() - 1, 0]] == marker;
+        for i in 0..self.array.nrows()
         {
-            if first == Marker::X
-            {
-                if self.get_state() == State::Incomplete { add_x(self, Marker::X); }
-                self.print();
-                if self.get_state() == State::Incomplete { add_o(self, Marker::O); }
-                self.print();
-            }
-            if first == Marker::O
-            {
-                if self.get_state() == State::Incomplete { add_o(self, Marker::O); }
-                self.print();
-                if self.get_state() == State::Incomplete { add_x(self, Marker::X); }
-                self.print();
-            }
-            let state = self.get_state();
-            if state != State::Incomplete 
-            { 
+            let mut winrow : bool = self.array[[i, 0]] == marker;
+            let mut wincol : bool = self.array[[0, i]] == marker;
 
-                self.clear();
-                return state; 
-            }     
-        }
-    }
-
-    pub fn run_game(&mut self, 
-                    add_x : &dyn Fn(&mut Board, Marker),
-                    add_o : &dyn Fn(&mut Board, Marker))
-    { //Complicated function reference moment
-        let mut xwins = 0;
-        let mut owins = 0;
-        let mut draws = 0;
-        'game: loop
-        {
-            match self.turns(add_x, add_o)
+            for j in 0..self.array.ncols()
             {
-                State::WinO => owins += 1,
-                State::WinX => xwins += 1,
-                State::Draw => draws += 1,
-                _ => println!("Bruh")
-            }
-            println!("{}: {}, {}: {}, {}: {}", 
-                Marker::X.as_color(), 
-                            xwins, 
-                Marker::O.as_color(), 
-                            owins, 
-                "Draws".bold(), 
-                            draws);
-
-            loop
-            {
-                let mut response = String::new();
-                print!("Play again? [Y/n] ");
-                let _ = io::stdout().flush();
-                io::stdin()
-                    .read_line(&mut response)
-                    .expect("Failed to read line");
-            
-                let response = response.trim();
-
-                match response
+                winrow = winrow && self.array[[i, j]] == marker;
+                wincol = wincol && self.array[[j, i]] == marker;
+                if i == j
                 {
-                    "Y" | "y" | "" => break,
-                    "N" | "n" => break 'game,
-                    _ => println!("Failed to read input. Please try again."),
+                    winul = winul && self.array[[i, j]] == marker;
+                } 
+                if (self.array.nrows() - 1 - i) == j {
+                    winur = winur && self.array[[i, j]] == marker;
                 }
             }
-        }
-    }
-
-    fn clear(&mut self)
-    {
-        let mut enumerate = 0;
-        for i in (0..3).rev()
-        {
-            for j in 0..3
+            if winrow || wincol 
             {
-                enumerate += 1; 
-                self.array[i][j] = Marker::Empty(enumerate);
+                return winrow || wincol;
+                //println!("wincol: {}", wincol);
+                //println!("winrow: {}", winrow);
             }
         }
-    }
 
-    pub fn new() -> Board
-    {
-        let mut newb = Board{
-            array : [[Marker::Empty(0); 3]; 3]
-        };
-        newb.clear();
-        newb
-    }
+        //println!("winur: {}", winur);
+        //println!("winul: {}", winul);
 
-    fn print(&self)
-    {
-        print!("\x1B[1J\x1B[1;1H");
-        let mut enumerate = 0;
-        for row in self.array { 
-            for spot in row
-            {
-                enumerate += 1;
-                print!(" {} ", spot.as_color());
-
-                if enumerate % 3 != 0
-                {
-                    print!("{}", "|".bold());
-                }
-            }
-            println!();
-            if enumerate != 9 {println!("{}", "---+---+---".bold());}
-        }
+        winul || winur
     }
 
     pub fn choose_player(marker : Marker) -> &'static dyn Fn(&mut Board, Marker)
@@ -455,6 +245,217 @@ impl Board {
                     println!("Input could not be read. Please try again.");
                     continue;
                 },
+            }
+        }
+    }
+
+    fn clear(&mut self)
+    {
+        for num in 0..self.array.len()
+        {
+            //Puts the numbers in the arrangment of the numpad
+            let index = self.input_to_index(num + 1);
+            self.array[index] = Marker::Empty(num + 1);
+        }
+    }
+
+    fn comp_add(&mut self, marker : Marker)
+    {
+        println!("{}: Computing...", marker.as_color());
+        let spot = self.calc_optimal(marker).0;
+        self.array[spot] = marker;
+    }
+
+    fn get_blanks(&self) -> Vec<[usize; 2]>
+    {
+        let mut empties = Vec::new();
+
+        for (num, tile) in self.array.iter().enumerate()
+        {
+            if tile.is_empty() {
+                empties.push(self.enumerate_to_index(num));
+            }
+        }
+
+        empties
+    }
+
+    fn enumerate_to_index(&self, num : usize) -> [usize; 2]
+    {   
+        let y = num % self.array.ncols(); 
+        let x = (num - y) / self.array.ncols();
+        [x, y]
+    }
+
+    fn input_to_index(&self, num : usize) -> [usize; 2]
+    {
+        let num = num - 1;
+        let y = num % self.array.ncols(); 
+        let x = 2 - (num - y) / self.array.ncols();
+        
+        [x, y]
+    }
+
+    fn get_state(&self) -> State
+    {
+        if self.check_win(Marker::O) {
+            State::WinO
+        }
+        else if self.check_win(Marker::X) {
+            State::WinX
+        } else if self.get_blanks().is_empty() {
+            State::Draw
+        } else {
+            State::Incomplete
+        }
+    }
+
+    pub fn new() -> Board
+    {
+        let empty_row = [Marker::Empty(0); 3];
+        let mut newb = Board{
+            array : array![empty_row, empty_row, empty_row]
+        };
+
+        newb.clear();
+        newb
+    }
+
+    fn print(&self)
+    {
+        print!("\x1B[1J\x1B[1;1H");
+        for (num, tile) in self.array.iter().enumerate() {
+            if num != 0 && num % self.array.ncols() == 0 {
+                println!("");
+                println!("{}", "---+---+---".bold());
+            }
+
+            print!(" {} ", tile.as_color());
+            
+            if (num + 1) % self.array.ncols() != 0 {
+                print!("{}", "|".bold());
+            }
+        }
+        println!("");
+    }
+
+    fn rand_add(&mut self, marker : Marker)
+    {
+        let empties = self.get_blanks();
+        let pos = empties.choose(&mut rand::thread_rng()).unwrap();
+
+        self.array[*pos] = marker;
+    }
+
+    pub fn run_game(&mut self, 
+                    add_x : &dyn Fn(&mut Board, Marker),
+                    add_o : &dyn Fn(&mut Board, Marker))
+    { //Complicated function reference moment
+        let mut xwins = 0;
+        let mut owins = 0;
+        let mut draws = 0;
+        'game: loop
+        {
+            match self.turns(add_x, add_o)
+            {
+                State::WinO => owins += 1,
+                State::WinX => xwins += 1,
+                State::Draw => draws += 1,
+                _ => println!("Bruh")
+            }
+            println!("{}: {}, {}: {}, {}: {}", 
+                Marker::X.as_color(), 
+                            xwins, 
+                Marker::O.as_color(), 
+                            owins, 
+                "Draws".bold(), 
+                            draws);
+
+            loop
+            {
+                let mut response = String::new();
+                print!("Play again? [Y/n] ");
+                let _ = io::stdout().flush();
+                io::stdin()
+                    .read_line(&mut response)
+                    .expect("Failed to read line");
+            
+                let response = response.trim();
+
+                match response
+                {
+                    "Y" | "y" | "" => break,
+                    "N" | "n" => break 'game,
+                    _ => println!("Failed to read input. Please try again."),
+                }
+            }
+        }
+    }
+
+    fn turns(&mut self, 
+        add_x : &dyn Fn(&mut Board, Marker),
+        add_o : &dyn Fn(&mut Board, Marker)) -> State
+    {
+        let first = Marker::random();
+        self.print();
+        loop
+        {
+            if first == Marker::X
+            {
+                if self.get_state() == State::Incomplete { add_x(self, Marker::X); }
+                self.print();
+                if self.get_state() == State::Incomplete { add_o(self, Marker::O); }
+                self.print();
+            }
+            if first == Marker::O
+            {
+                if self.get_state() == State::Incomplete { add_o(self, Marker::O); }
+                self.print();
+                if self.get_state() == State::Incomplete { add_x(self, Marker::X); }
+                self.print();
+            }
+            let state = self.get_state();
+            if state != State::Incomplete 
+            { 
+
+                self.clear();
+                return state; 
+            }     
+        }
+    }
+
+    fn user_add(&mut self, marker : Marker)
+    {
+        loop
+        {
+            let mut pos = String::new();
+            print!("{}: ", marker.as_color());
+            let _ = io::stdout().flush();
+            io::stdin()
+                .read_line(&mut pos)
+                .expect("Failed to read line");
+        
+            let num : usize = match pos.trim().parse() {
+                Ok(num) => num,
+                Err(_) => {
+                    println!("Failed to read number. Please enter again.");
+                    continue
+                },
+            };
+            if !((1..=9).contains(&num))
+            {
+                println!("That is not a choice! Please enter again.");
+                continue
+            }
+
+            let index = self.input_to_index(num);
+
+            if self.array[index].is_empty() {
+                self.array[index] = marker;
+                break
+            } else {
+                println!("That spot is already taken! Please enter again.");
+                continue
             }
         }
     } 
