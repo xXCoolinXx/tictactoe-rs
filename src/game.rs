@@ -1,5 +1,5 @@
 use std::vec::Vec;
-use rand::seq::SliceRandom;
+use rand::{Rng, seq::SliceRandom, prelude::ThreadRng};
 //use rand::Rng;
 use std::io::{self, Write};
 use colored::*;
@@ -78,7 +78,8 @@ impl Marker
 
 pub struct Board
 {
-    array : Array2<Marker>
+    array : Array2<Marker>,
+    rng : ThreadRng,
 }
 
 impl Board {
@@ -87,10 +88,12 @@ impl Board {
         for pos in self.get_blanks()
         {
             let mut oppboard = Board {
-                array : self.array.clone()
+                array : self.array.clone(),
+                rng : self.rng.clone()
             };
             let mut dubboard = Board{
-                array : self.array.clone()
+                array : self.array.clone(),
+                rng : self.rng.clone()
             };
             
             oppboard.array[pos] = marker.opposite();
@@ -106,7 +109,7 @@ impl Board {
         self.rand_add(marker);
     }
 
-    fn calc_optimal(&self, marker : Marker) -> ([usize; 2], i32)
+    fn calc_optimal(&mut self, marker : Marker) -> ([usize; 2], i32)
     {  
         let mut move_list = Vec::new();
         for (num, _) in self.array.iter().enumerate()
@@ -115,7 +118,8 @@ impl Board {
                 if self.array[index].is_empty()
                 {
                     let mut mboard = Board{
-                        array : self.array.clone()
+                        array : self.array.clone(),
+                        rng : self.rng.clone()
                     };
                     mboard.array[index] = marker;
                     let state = mboard.get_state();
@@ -154,7 +158,7 @@ impl Board {
         }
         let top_list : Vec<([usize; 2], i32)> = move_list[bottom_index..].to_vec();
         
-        *top_list.choose(&mut rand::thread_rng()).unwrap() //Return one with the top score
+        *top_list.choose(&mut self.rng).unwrap() //Return one with the top score
     }
 
     fn check_win(&self, marker : Marker) -> bool 
@@ -314,7 +318,8 @@ impl Board {
     {
         let empty_row = [Marker::Empty(0); 3];
         let mut newb = Board{
-            array : array![empty_row, empty_row, empty_row]
+            array : array![empty_row, empty_row, empty_row],
+            rng : rand::thread_rng(),
         };
 
         newb.clear();
@@ -342,7 +347,7 @@ impl Board {
     fn rand_add(&mut self, marker : Marker)
     {
         let empties = self.get_blanks();
-        let pos = empties.choose(&mut rand::thread_rng()).unwrap();
+        let pos = empties.choose(&mut self.rng).unwrap();
 
         self.array[*pos] = marker;
     }
@@ -396,28 +401,27 @@ impl Board {
         add_x : &dyn Fn(&mut Board, Marker),
         add_o : &dyn Fn(&mut Board, Marker)) -> State
     {
-        let first = Marker::random();
+        let func_list = [add_x, add_o];
+        let marker_list = [Marker::X, Marker::O];
+
+        let one = self.rng.gen_range(0..2);
+        let two = 1 - one;
+
         self.print();
         loop
         {
-            if first == Marker::X
-            {
-                if self.get_state() == State::Incomplete { add_x(self, Marker::X); }
-                self.print();
-                if self.get_state() == State::Incomplete { add_o(self, Marker::O); }
-                self.print();
+            if self.get_state() == State::Incomplete { 
+                func_list[one](self, marker_list[one]); 
             }
-            if first == Marker::O
-            {
-                if self.get_state() == State::Incomplete { add_o(self, Marker::O); }
-                self.print();
-                if self.get_state() == State::Incomplete { add_x(self, Marker::X); }
-                self.print();
+            self.print();
+            if self.get_state() == State::Incomplete { 
+                func_list[two](self, marker_list[two]); 
             }
+            self.print();
+
             let state = self.get_state();
             if state != State::Incomplete 
             { 
-
                 self.clear();
                 return state; 
             }     
