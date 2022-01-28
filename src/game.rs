@@ -61,11 +61,6 @@ impl Marker
             Marker::Empty(_) => State::Incomplete
         }
     }
-    fn random() -> Marker
-    {
-        let markers : [Marker; 2] = [Marker::O, Marker::X];
-        return *markers.choose(&mut rand::thread_rng()).unwrap();
-    }
     fn is_empty(&self) -> bool
     {
         match self
@@ -76,10 +71,12 @@ impl Marker
     }
 }
 
+#[derive(Clone)]
 pub struct Board
 {
     array : Array2<Marker>,
     rng : ThreadRng,
+    width : usize,
 }
 
 impl Board {
@@ -87,14 +84,8 @@ impl Board {
     {
         for pos in self.get_blanks()
         {
-            let mut oppboard = Board {
-                array : self.array.clone(),
-                rng : self.rng.clone()
-            };
-            let mut dubboard = Board{
-                array : self.array.clone(),
-                rng : self.rng.clone()
-            };
+            let mut oppboard = self.clone();
+            let mut dubboard = self.clone();
             
             oppboard.array[pos] = marker.opposite();
             dubboard.array[pos] = marker;
@@ -109,7 +100,7 @@ impl Board {
         self.rand_add(marker);
     }
 
-    fn calc_optimal(&mut self, marker : Marker) -> ([usize; 2], i32)
+    fn calc_optimal(&mut self, marker : Marker, layer : u32) -> ([usize; 2], i32)
     {  
         let mut move_list = Vec::new();
         for (num, _) in self.array.iter().enumerate()
@@ -117,10 +108,7 @@ impl Board {
             let index = self.enumerate_to_index(num);
                 if self.array[index].is_empty()
                 {
-                    let mut mboard = Board{
-                        array : self.array.clone(),
-                        rng : self.rng.clone()
-                    };
+                    let mut mboard = self.clone();
                     mboard.array[index] = marker;
                     let state = mboard.get_state();
 
@@ -134,7 +122,14 @@ impl Board {
                     }
                     else
                     {
-                        let score = - mboard.calc_optimal(marker.opposite()).1; 
+                        let score;
+                        if layer < 9 {
+                            score = - mboard.calc_optimal(marker.opposite(), layer + 1).1; 
+                        }
+                        else
+                        {
+                            score = 0;
+                        }
                         //Reverse scores for O because no want win
                         move_list.push((index, score));
                     }
@@ -164,13 +159,13 @@ impl Board {
     fn check_win(&self, marker : Marker) -> bool 
     {
         let mut winul : bool = self.array[[0, 0]] == marker;
-        let mut winur : bool = self.array[[self.array.nrows() - 1, 0]] == marker;
-        for i in 0..self.array.nrows()
+        let mut winur : bool = self.array[[self.nrows() - 1, 0]] == marker;
+        for i in 0..self.nrows()
         {
             let mut winrow : bool = self.array[[i, 0]] == marker;
             let mut wincol : bool = self.array[[0, i]] == marker;
 
-            for j in 0..self.array.ncols()
+            for j in 0..self.ncols()
             {
                 winrow = winrow && self.array[[i, j]] == marker;
                 wincol = wincol && self.array[[j, i]] == marker;
@@ -178,7 +173,7 @@ impl Board {
                 {
                     winul = winul && self.array[[i, j]] == marker;
                 } 
-                if (self.array.nrows() - 1 - i) == j {
+                if (self.nrows() - 1 - i) == j {
                     winur = winur && self.array[[i, j]] == marker;
                 }
             }
@@ -261,13 +256,27 @@ impl Board {
             let index = self.input_to_index(num + 1);
             self.array[index] = Marker::Empty(num + 1);
         }
+
+        self.width = self.array[[0, self.ncols() - 1]].string().len();
     }
 
     fn comp_add(&mut self, marker : Marker)
     {
         println!("{}: Computing...", marker.as_color());
-        let spot = self.calc_optimal(marker).0;
+        let spot = self.calc_optimal(marker, 0).0;
         self.array[spot] = marker;
+    }
+
+    fn size(&self) -> usize {
+        self.ncols() * self.nrows()
+    }
+
+    fn nrows(&self) -> usize {
+        self.array.nrows()
+    }
+
+    fn ncols(&self) -> usize {
+        self.array.ncols()
     }
 
     fn get_blanks(&self) -> Vec<[usize; 2]>
@@ -286,16 +295,16 @@ impl Board {
 
     fn enumerate_to_index(&self, num : usize) -> [usize; 2]
     {   
-        let y = num % self.array.ncols(); 
-        let x = (num - y) / self.array.ncols();
+        let y = num % self.ncols(); 
+        let x = (num - y) / self.ncols();
         [x, y]
     }
 
     fn input_to_index(&self, num : usize) -> [usize; 2]
     {
         let num = num - 1;
-        let y = num % self.array.ncols(); 
-        let x = 2 - (num - y) / self.array.ncols();
+        let y = num % self.ncols(); 
+        let x = self.ncols() - 1 - (num - y) / self.ncols();
         
         [x, y]
     }
@@ -320,6 +329,7 @@ impl Board {
         let mut newb = Board{
             array : array![empty_row, empty_row, empty_row],
             rng : rand::thread_rng(),
+            width : 0,
         };
 
         newb.clear();
@@ -329,15 +339,26 @@ impl Board {
     fn print(&self)
     {
         print!("\x1B[1J\x1B[1;1H");
+
+        let mut dashes = String::new();
+        for _ in 0..(self.width+2) {
+            dashes.push_str("-");
+        }
         for (num, tile) in self.array.iter().enumerate() {
-            if num != 0 && num % self.array.ncols() == 0 {
+            if num != 0 && num % self.ncols() == 0 {
                 println!("");
-                println!("{}", "---+---+---".bold());
+                for i in 0..self.ncols() {
+                    print!("{}", dashes.bold());
+                    if i != self.ncols() - 1 {
+                        print!("{}", "+".bold());
+                    } 
+                }
+                println!("");
             }
 
-            print!(" {} ", tile.as_color());
+            print!(" {:>width$} ", tile.as_color(), width=self.width);
             
-            if (num + 1) % self.array.ncols() != 0 {
+            if (num + 1) % self.ncols() != 0 {
                 print!("{}", "|".bold());
             }
         }
@@ -446,7 +467,8 @@ impl Board {
                     continue
                 },
             };
-            if !((1..=9).contains(&num))
+            let size = self.size();
+            if !((1..=size).contains(&num))
             {
                 println!("That is not a choice! Please enter again.");
                 continue
